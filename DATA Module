@@ -1,0 +1,42 @@
+-- Get the Players service to track player joins, leaves, and access player objects
+local playerService = game:GetService("Players")
+
+-- Get the DataStoreService to enable saving/loading persistent player data
+local dataService = game:GetService("DataStoreService")
+
+-- Create or access a named DataStore called "DataStoreV1"
+-- This is where player data will be saved between sessions
+local store = dataService:GetDataStore("DataStoreV1")
+
+-- Create a table to hold temporary session data for each player
+-- This data exists only while the server is running
+local sessionData = {}
+
+-- Create the module table that will hold all public functions
+local dataMod = {}
+
+-- Define a function called recursiveCopy that performs a deep copy of a table
+-- This is useful for duplicating nested data structures without linking to the original
+dataMod.recursiveCopy = function(dataTable)
+	
+	-- Create a new empty table to hold the copied data
+	local tableCopy = {}
+	
+	-- Loop through each key-value pair in the original table
+	for index, value in pairs(dataTable) do
+		
+		-- If the value is itself a table, recursively copy it
+		if type(value) == "table" then
+			value = dataMod.recursiveCopy(value)
+		end
+		
+		-- Assign the copied value to the same key in the new table
+		tableCopy[index] = value
+	end
+	
+	-- Return the fully copied table
+	return tableCopy
+end
+
+-- Return the module so other scripts can require and use its functions
+return dataMod
