@@ -1,0 +1,14 @@
+-- Loop through all children of this script (typically ModuleScripts placed under ServerHandler)
+for _, module in pairs(script:GetChildren()) do
+
+    -- Create a coroutine (a lightweight thread) to run the module loading function asynchronously
+    local loadMod = coroutine.create(function()
+    
+        -- Load the module using require(), which runs the ModuleScript and returns its contents
+        require(module)
+        
+    end)
+
+    -- Start (resume) the coroutine so the module actually gets loaded
+    coroutine.resume(loadMod)
+end
