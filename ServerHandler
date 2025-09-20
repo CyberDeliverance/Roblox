@@ -1,3 +1,6 @@
+--THIS SCRIPT SHOULD BE INSERTED INTO A NEW OBJECT UNDER ServerScriptService
+
+
 -- Loop through all children of this script (typically ModuleScripts placed under ServerHandler)
 for _, module in pairs(script:GetChildren()) do
 
