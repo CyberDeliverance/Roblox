@@ -177,5 +177,18 @@ dataMod.get = function(player, stat)
 	return sessionData[key] and sessionData[key][stat] or nil
 end
 
+-- Save function: persists session data to the data store
+dataMod.save = function(player)
+	local key = player.UserId
+
+	-- Deep copy to avoid mutation during async operation
+	local data = dataMod.recursiveCopy(sessionData[key])
+
+	-- Save to persistent store
+	store:SetAsync(key, data)
+
+	print(player.Name .. "'s data has been saved!")
+end
+
 -- Return the module so other scripts can require and use its functions
 return dataMod
