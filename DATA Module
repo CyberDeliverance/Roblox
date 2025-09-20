@@ -116,5 +116,36 @@ playerService.PlayerAdded:Connect(function(player)
 	dataMod.setupData(player)
 end)
 
+-- Function to set a stat value in both sessionData and leaderstats
+dataMod.set = function(player, stat, value)
+	local key = player.UserId -- Unique identifier for the player
+
+	-- Update the stat in sessionData
+	sessionData[key][stat] = value
+
+	-- Update the stat in the visible leaderstats folder
+	player.leaderstats[stat].Value = value
+end
+
+-- Function to increment a stat by a given value
+dataMod.increment = function(player, stat, value)
+	local key = player.UserId -- Unique identifier for the player
+
+	-- Add the value to the current stat in sessionData
+	sessionData[key][stat] = dataMod.get(player, stat) + value
+
+	-- Update the stat in the visible leaderstats folder
+	player.leaderstats[stat].Value = dataMod.get(player, stat)
+end
+
+-- Function to retrieve a stat value from sessionData
+-- Placeholder: you can define the return logic later
+dataMod.get = function(player, stat)
+	local key = player.UserId -- Unique identifier for the player
+
+	-- Return logic to be added later
+	return -- ← You’ll complete this when ready
+end
+
 -- Return the module so other scripts can require and use its functions
 return dataMod
