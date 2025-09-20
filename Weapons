@@ -1,0 +1,30 @@
+--THIS SCRIPT SHOULD BE INSERTED IN A NEW MODULE UNDER ServerScriptService/ServerHandler
+
+
+-- Access core services
+local playerService = game:GetService("Players")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+
+-- RemoteEvents used for hit detection and replication
+local hitRemote = replicatedStorage.Hit
+local replicatedRemote = replicatedStorage.Replicate
+
+-- Require your data module for stat tracking or persistence
+local dataMod = require(script.Parent.DATA)
+
+-- Create the weapons module table
+local weapons = {}
+
+-- Utility function to resolve a player from a hit object
+-- Returns the player and their character model
+weapons.playerFromHit = function(hit)
+	-- Find the nearest ancestor of type "Model" (usually the character)
+	local char = hit:FindFirstAncestorOfClass("Model")
+
+	-- Resolve the player from the character model
+	local player = playerService:GetPlayerFromCharacter(char)
+
+	return player, char
+end
+
+return weapons
