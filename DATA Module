@@ -1,3 +1,6 @@
+--THIS SCRIPT SHOULD BE INSERTED INTO A NEW MODULE UNDER ServerScriptService/ServerHandler
+
+
 -- Get the Players service to track player joins, leaves, and access player objects
 local playerService = game:GetService("Players")
 
