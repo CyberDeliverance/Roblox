@@ -147,5 +147,35 @@ dataMod.get = function(player, stat)
 	return -- ← You’ll complete this when ready
 end
 
+-- Centralized data setter
+dataMod.set = function(player, stat, value)
+	local key = player.UserId
+	sessionData[key][stat] = value
+
+	-- Sync with leaderstats if available
+	if player.leaderstats and player.leaderstats:FindFirstChild(stat) then
+		player.leaderstats[stat].Value = value
+	end
+end
+
+-- Increment function with fallback to get()
+dataMod.increment = function(player, stat, value)
+	local key = player.UserId
+	local current = dataMod.get(player, stat) or 0
+	local newValue = current + value
+
+	sessionData[key][stat] = newValue
+
+	if player.leaderstats and player.leaderstats:FindFirstChild(stat) then
+		player.leaderstats[stat].Value = newValue
+	end
+end
+
+-- Getter function
+dataMod.get = function(player, stat)
+	local key = player.UserId
+	return sessionData[key] and sessionData[key][stat] or nil
+end
+
 -- Return the module so other scripts can require and use its functions
 return dataMod
