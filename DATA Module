@@ -190,5 +190,17 @@ dataMod.save = function(player)
 	print(player.Name .. "'s data has been saved!")
 end
 
+-- Removes session data for a player
+dataMod.removeSessionData = function(player)
+	local key = player.UserId
+	sessionData[key] = nil
+end
+
+-- Hook into player removal to save and clean up
+playerService.PlayerRemoving:Connect(function(player)
+	dataMod.save(player)
+	dataMod.removeSessionData(player)
+end)
+
 -- Return the module so other scripts can require and use its functions
 return dataMod
