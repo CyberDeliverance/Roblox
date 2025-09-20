@@ -92,6 +92,84 @@ local function addPlayersToTable()
 	end
 end
 
+-- Spawns each competitor at a random spawn point from the Spawns folder
+local function spawnPlayers()
+	local spawnPoints = workspace.Spawns:GetChildren()
 
+	for _, player in pairs(competitors) do
+		-- Wait for the character to load
+		local char = player.Character or player.CharacterAdded:Wait()
+
+		-- Get a random spawn point
+		local randomIndex = random:NextInteger(1, #spawnPoints)
+		local spawnPoint = spawnPoints[randomIndex]
+
+		-- Remove the used spawn point to avoid duplicates
+		table.remove(spawnPoints, randomIndex)
+
+		-- Ensure the character has a PrimaryPart set
+		if char.PrimaryPart then
+			-- Offset the spawn slightly above the point to avoid clipping
+			char:SetPrimaryPartCFrame(spawnPoint.CFrame * CFrame.new(0, 2, 0))
+		end
+	end
+end
+
+local function loadALLPlayers()
+	for _, player in pairs(playerService:GetPlayers()) do
+		player:LoadCharacter()
+	end
+end
+
+-- Main game loop that handles intermission, round timing, and winner logic
+gameRunner.gameLoop = function()
+	while wait(0.5) do
+		-- Wait until enough players are present
+		if #playerService:GetPlayers() < MIN_PLAYERS then
+			message.Value = "There must be " .. MIN_PLAYERS .. " players to start."
+		else
+			-- Intermission countdown
+			local intermission = INTERMISSION_LENGTH
+			repeat
+				message.Value = "Intermission: " .. intermission
+				intermission = intermission - 1
+				wait(1)
+			until intermission == 0
+
+			message.Value = "Get ready..."
+			wait(2)
+
+			-- Setup round
+			addPlayersToTable()
+			spawnPlayers()
+
+			-- Round countdown
+			local gameTime = ROUND_LENGTH
+			repeat
+				message.Value = "Time remaining: " .. gameTime
+				remaining.Value = #competitors .. " remaining"
+				gameTime = gameTime - 1
+				wait(1)
+			until #competitors <= 1 or gameTime == 0
+
+			-- Reset and declare outcome
+			loadAllPlayers()
+			remaining.Value = ""
+
+			if gameTime == 0 or #competitors == 0 then
+				message.Value = "There were no victors..."
+			else
+				local winner = competitors[1]
+				dataMod.increment(winner, "Wins", 1)
+				dataMod.increment(winner, "Coins", PRIZE_AMOUNT)
+				message.Value = winner.Name .. " has won the round!"
+			end
+		end
+	end
+end
+
+-- Start the game loop in a separate thread
+spawn(gameRunner.gameLoop)
+	
 -- Return the module so other scripts can require and use its functions
 return gameRunner
