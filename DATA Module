@@ -38,5 +38,59 @@ dataMod.recursiveCopy = function(dataTable)
 	return tableCopy
 end
 
+-- Define default data for new players
+-- This is used when no saved data exists in the DataStore
+local defaultData = {
+	Coins = 0, -- Starting currency
+	Stage = 1  -- Starting level or progress stage
+}
+
+-- Function to load saved data from the DataStore
+-- Returns the saved data table or nil if not found
+dataMod.load = function(player)
+	local key = player.UserId -- Use player's unique UserId as the key
+
+	-- Attempt to retrieve data from the DataStore
+	local success, data = pcall(function()
+		return store:GetAsync(key)
+	end)
+
+	-- If retrieval was successful, return the data; otherwise return nil
+	if success then
+		return data
+	else
+		return nil
+	end
+end
+
+-- Function to initialize session data when a player joins the game
+-- Combines default values with any saved data from previous sessions
+dataMod.setupData = function(player)
+	local key = player.UserId -- Unique key for this player
+
+	-- Load saved data from the DataStore
+	local data = dataMod.load(player)
+
+	-- Start with a deep copy of the default data
+	sessionData[key] = dataMod.recursiveCopy(defaultData)
+
+	-- If saved data exists, overwrite default values with saved values
+	if data then
+		for index, value in pairs(data) do
+			print(index, value) -- Debug: show what data is being loaded
+
+			-- Assign each saved value to the corresponding key in sessionData
+			-- If you define dataMod.set() later, you can replace this with a call to it
+			sessionData[key][index] = value
+		end
+
+		-- Confirm that the player's data was successfully loaded
+		print(player.Name .. "'s data has been loaded!")
+	else
+		-- If no saved data exists, this is a new player
+		print(player.Name .. " is a new player!")
+	end
+end
+
 -- Return the module so other scripts can require and use its functions
 return dataMod
