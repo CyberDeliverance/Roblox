@@ -1,0 +1,97 @@
+--THIS SHOULD BE INSERTED INTO A NEW MODULE UNDER ServerScriptService/ServerHandler
+
+
+-- Access the Players service to track player joins and leaves
+local playerService = game:GetService("Players")
+
+-- Access ReplicatedStorage for shared objects between server and client
+local replicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Require your data module for saving/loading player data
+local dataMod = require(script.Parent.Data)
+
+-- Create a random number generator instance (can be used for prizes, spawns, etc.)
+local random = Random.new()
+
+-- References to RemoteEvents or RemoteValues used for UI communication
+local message = replicatedStorage.Message      -- 🟩 You can use this to broadcast messages to players
+local remaining = replicatedStorage.Remaining  -- 🟩 You can use this to show time left in a round
+
+-- Create the module table that will hold public game loop functions
+local gameRunner = {}
+
+-- Table to track active competitors in the current round
+local competitors = {}
+
+-- Game configuration constants
+local MIN_PLAYERS = 2             -- Minimum number of players required to start a round
+local INTERMISSION_LENGTH = 20    -- Time (in seconds) between rounds
+local ROUND_LENGTH = 300          -- Duration of each round in seconds
+local PRIZE_AMOUNT = 100          -- Amount of Coins awarded to the winner
+
+-- 🟦 You’ll define functions like gameRunner.start(), gameRunner.endRound(), etc. below
+-- Function to find a player in the competitors table
+-- Returns the index and the player object if found
+local function getPlayerInTable(player)
+	for i, competitor in pairs(competitors) do
+		if competitor == player then
+			return i, player
+		end
+	end
+end
+
+-- Function to remove a player from the competitors table
+-- Uses getPlayerInTable to find the index, then removes that entry
+local function removePlayerFromTable(player)
+	local index,_ = getPlayerInTable(player)
+
+	if index then
+		table.remove(competitors, index)
+	end
+end
+
+-- Hook into the PlayerRemoving event
+-- When a player leaves the game, remove them from the competitors table
+playerService.PlayerRemoving:Connect(function(player)
+	removePlayerFromTable(player)
+end)
+
+-- Prepares a player by equipping them and hooking into their death event
+local function preparePlayer(player)
+	-- Wait for the character to load if not already present
+	local char = player.Character or player.CharacterAdded:Wait()
+
+	-- Get the Humanoid object from the character
+	local hum = char:WaitForChild("Humanoid")
+
+	-- Clone the default weapon and place it in the player's backpack
+	local defaultWeapon = replicatedStorage.Weapons.M1911:Clone()
+	defaultWeapon.Parent = player.Backpack
+
+	-- When the player dies, remove them from the competitors table
+	hum.Died:Connect(function()
+		removePlayerFromTable(player)
+	end)
+end
+
+-- Adds all currently active players to the competitors table
+-- Prepares each player if their character is alive
+local function addPlayersToTable()
+	for _, player in pairs(playerService:GetPlayers()) do
+		-- Wait for the character to load if not already present
+		local char = player.Character or player.CharacterAdded:Wait()
+
+		-- Check if the Humanoid exists and the player is alive
+		if char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+			-- Add the player to the competitors table
+			table.insert(competitors, player)
+
+			-- Equip and hook death logic
+			preparePlayer(player)
+		end
+	end
+end
+
+
+-- Return the module so other scripts can require and use its functions
+return gameRunner
