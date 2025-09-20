@@ -18,22 +18,22 @@ local dataMod = {}
 -- Define a function called recursiveCopy that performs a deep copy of a table
 -- This is useful for duplicating nested data structures without linking to the original
 dataMod.recursiveCopy = function(dataTable)
-	
+
 	-- Create a new empty table to hold the copied data
 	local tableCopy = {}
-	
+
 	-- Loop through each key-value pair in the original table
 	for index, value in pairs(dataTable) do
-		
+
 		-- If the value is itself a table, recursively copy it
 		if type(value) == "table" then
 			value = dataMod.recursiveCopy(value)
 		end
-		
+
 		-- Assign the copied value to the same key in the new table
 		tableCopy[index] = value
 	end
-	
+
 	-- Return the fully copied table
 	return tableCopy
 end
@@ -45,22 +45,19 @@ local defaultData = {
 	Stage = 1  -- Starting level or progress stage
 }
 
--- Function to load saved data from the DataStore
--- Returns the saved data table or nil if not found
 dataMod.load = function(player)
-	local key = player.UserId -- Use player's unique UserId as the key
+	local key = player.UserId 
+	local dataMod
 
-	-- Attempt to retrieve data from the DataStore
-	local success, data = pcall(function()
-		return store:GetAsync(key)
+	local success, err = pcall(function()
+		data = store:GetAsync(key)
 	end)
 
-	-- If retrieval was successful, return the data; otherwise return nil
-	if success then
-		return data
-	else
-		return nil
+	if not success then
+		data = dataMod.load(player)
 	end
+
+	return data
 end
 
 -- Function to initialize session data when a player joins the game
@@ -177,17 +174,19 @@ dataMod.get = function(player, stat)
 	return sessionData[key] and sessionData[key][stat] or nil
 end
 
--- Save function: persists session data to the data store
 dataMod.save = function(player)
 	local key = player.UserId
-
-	-- Deep copy to avoid mutation during async operation
 	local data = dataMod.recursiveCopy(sessionData[key])
 
-	-- Save to persistent store
-	store:SetAsync(key, data)
+	local success, err = pcall(function()
+		store:SetAsync(key, data)
+	end)
 
-	print(player.Name .. "'s data has been saved!")
+	if success then
+		print(player.Name.. "'s data has been saved!")
+	else 
+		dataMod.save(player)
+	end
 end
 
 -- Removes session data for a player
