@@ -92,5 +92,29 @@ dataMod.setupData = function(player)
 	end
 end
 
+-- Listen for when a player joins the game
+playerService.PlayerAdded:Connect(function(player)
+
+	-- Create a Folder named "leaderstats" to hold visible player stats
+	local folder = Instance.new("Folder")
+	folder.Name = "leaderstats" -- This name is required for Roblox to display stats in the leaderboard
+	folder.Parent = player -- Attach the folder to the player object
+
+	-- Create an IntValue to track Coins
+	local coins = Instance.new("IntValue")
+	coins.Name = "Coins" -- Stat name shown in the leaderboard
+	coins.Parent = folder -- Attach it to the leaderstats folder
+	coins.Value = defaultData.Coins -- Initialize with default value
+
+	-- Create an IntValue to track Stage
+	local stage = Instance.new("IntValue")
+	stage.Name = "Stage" -- Stat name shown in the leaderboard
+	stage.Parent = folder -- Attach it to the leaderstats folder
+	stage.Value = defaultData.Stage -- Initialize with default value
+
+	-- Call setupData to load saved data or assign defaults
+	dataMod.setupData(player)
+end)
+
 -- Return the module so other scripts can require and use its functions
 return dataMod
