@@ -1,0 +1,34 @@
+-- 📦 Access ReplicatedStorage service to retrieve shared values
+local replicatedStorage = game:GetService("ReplicatedStorage")
+
+-- 🎯 Reference to the ScreenGui (Main) that contains the UI elements
+-- Assumes this ModuleScript is parented to UIHandler, which is under Main
+local gui = script.Parent.Parent
+
+-- 📡 Get replicated StringValue objects used for game status updates
+local message = replicatedStorage.Message
+local remaining = replicatedStorage.Remaining
+
+-- 🧠 Initialize the module table to return
+local display = {}
+
+-- 🖥️ Get references to the TextLabel UI elements inside the ScreenGui
+local messageLabel = gui:WaitForChild("Message")
+local remainingLabel = gui:WaitForChild("Remaining")
+
+-- 🔁 Set initial text values based on the current state of the replicated values
+messageLabel.Text = message.Value
+remainingLabel.Text = remaining.Value
+
+-- 🔄 Update the Message label whenever the replicated value changes
+message:GetPropertyChangedSignal("Value"):Connect(function()
+	messageLabel.Text = message.Value
+end)
+
+-- 🔄 Update the Remaining label whenever the replicated value changes
+remaining:GetPropertyChangedSignal("Value"):Connect(function()
+	remainingLabel.Text = remaining.Value
+end)
+
+-- 📤 Return the module table (currently empty, but ready for future expansion)
+return display
