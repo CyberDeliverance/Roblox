@@ -1,0 +1,23 @@
+-- 🔁 Loop through all children of this script
+for _, module in pairs(script:GetChildren()) do
+
+	-- 🧪 Check if the child is a ModuleScript before requiring
+	if module:IsA("ModuleScript") then
+
+		-- 🚀 Create a coroutine to load the module asynchronously
+		local loadMod = coroutine.create(function()
+			-- 🧰 Attempt to require the module safely
+			local success, result = pcall(require, module)
+
+			if success then
+				print("✅ Loaded module:", module.Name)
+				-- Optional: store result in a table if you want to track loaded modules
+			else
+				warn("❌ Failed to load module:", module.Name, "\n", result)
+			end
+		end)
+
+		-- ▶️ Start the coroutine
+		coroutine.resume(loadMod)
+	end
+end
