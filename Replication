@@ -1,0 +1,39 @@
+--THIS SCRIPTS SHOULD INSERTED IN A NEW MODULE CALLED REPLICATION UNDER StarterPlayerScripts/LocalHandler
+
+
+-- Get the Players and ReplicatedStorage services
+local playerService = game:GetService("Players")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Reference to the local player (client-side only)
+local player = playerService.LocalPlayer
+
+-- Table to hold replication-related functions or data (can be expanded later)
+local replication = {}
+
+-- Reference to the RemoteEvent named "Replicate" in ReplicatedStorage
+local replicateRemote = replicatedStorage:WaitForChild("Replicate")
+
+-- Listen for replication events sent from the server
+replicateRemote.OnClientEvent:Connect(function(otherPlayer, gunSettings, cframe, length)
+	-- Only replicate visuals if the event is from another player
+	if otherPlayer ~= player then
+		-- Create a visual ray effect using a Neon part
+		local visual = Instance.new("Part")
+		visual.Anchored = true
+		visual.CanCollide = false
+		visual.Material = Enum.Material.Neon
+		visual.Color = gunSettings.rayColor
+		visual.Size = Vector3.new(gunSettings.raySize.X, gunSettings.raySize.Y, length)
+		visual.CFrame = cframe
+
+		-- Parent the visual effect to the Effects folder in the workspace
+		visual.Parent = workspace:WaitForChild("Effects")
+
+		-- Automatically clean up the visual after a set time
+		game:GetService("Debris"):AddItem(visual, gunSettings.debrisTime)
+	end
+end)
+
+-- Return the replication table (can be used to expose client-side methods later)
+return replication
