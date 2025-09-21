@@ -1,17 +1,13 @@
 --THIS SCRIPT SHOULD BE INSERTED INTO A NEW OBJECT UNDER ServerScriptService
 
 
--- Loop through all children of this script (typically ModuleScripts placed under ServerHandler)
+-- Loop through all child modules of the current script
 for _, module in pairs(script:GetChildren()) do
-
-    -- Create a coroutine (a lightweight thread) to run the module loading function asynchronously
+    -- Create a coroutine to load the module asynchronously
     local loadMod = coroutine.create(function()
-    
-        -- Load the module using require(), which runs the ModuleScript and returns its contents
-        require(module)
-        
+        require(module) -- Load and execute the module
     end)
 
-    -- Start (resume) the coroutine so the module actually gets loaded
+    -- Start the coroutine
     coroutine.resume(loadMod)
 end
