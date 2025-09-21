@@ -1,182 +1,159 @@
 --THIS SCRIPT SHOULD BE INSERTED INTO A NEW MODULE UNDER ServerScriptService/ServerHandler
 
 
--- Get the Players service to track player joins, leaves, and access player objects
-local playerService = game:GetService("Players")
+-- Services
+local playerService = game:GetService("Players") -- Handles player-related events
+local dataService = game:GetService("DataStoreService") -- Enables persistent data storage
+local store = dataService:GetDataStore("DataStoreV1") -- Creates or accesses a named DataStore
 
--- Get the DataStoreService to enable saving/loading persistent player data
-local dataService = game:GetService("DataStoreService")
+-- Session data and module table
+local sessionData = {} -- Stores player data during the session
+local dataMod = {} -- Module table to hold functions
+local AUTOSAVE_INTERVAL = 120 -- Time in seconds between automatic saves
 
--- Create or access a named DataStore called "DataStoreV1"
--- This is where player data will be saved between sessions
-local store = dataService:GetDataStore("DataStoreV1")
-
--- Create a table to hold temporary session data for each player
--- This data exists only while the server is running
-local sessionData = {}
-
--- Create the module table that will hold all public functions
-local dataMod = {}
-
--- Define a function called recursiveCopy that performs a deep copy of a table
--- This is useful for duplicating nested data structures without linking to the original
+-- Deep copy function to clone nested tables
 dataMod.recursiveCopy = function(dataTable)
-	local tableCopy = {}
-	for index, value in pairs(dataTable) do
-		if type(value) == "table" then
-			value = dataMod.recursiveCopy(value)
-		end
-		tableCopy[index] = value
-	end
-	return tableCopy
+    local tableCopy = {}
+    for index, value in pairs(dataTable) do
+        if type(value) == "table" then
+            value = dataMod.recursiveCopy(value) -- Recursively copy nested tables
+        end
+        tableCopy[index] = value
+    end
+    return tableCopy
 end
 
--- Define default data for new players
--- This is used when no saved data exists in the DataStore
+-- Default stats for new players
 local defaultData = {
-	Coins = 0,
-	Stage = 1
+    Coins = 0;
+    Wins = 0;
+    Kills = 0;
 }
 
--- Loads a player's data from the data store
--- Retries recursively if the load fails
+-- Loads player data from the DataStore
 dataMod.load = function(player)
-	local key = player.UserId
-	local data
+    local key = player.UserId
+    local data
+    local success, err = pcall(function()
+        data = store:GetAsync(key) -- Attempt to retrieve saved data
+    end)
 
-	local success, err = pcall(function()
-		data = store:GetAsync(key)
-	end)
+    if not success then
+        data = dataMod.load(player) -- Retry on failure (note: this can cause infinite recursion)
+    end
 
-	if not success then
-		data = dataMod.load(player)
-	end
-
-	return data
+    return data
 end
 
--- Saves a player's session data to the data store
--- Retries recursively if the save fails
-dataMod.save = function(player)
-	local key = player.UserId
-	local data = dataMod.recursiveCopy(sessionData[key])
-
-	local success, err = pcall(function()
-		store:SetAsync(key, data)
-	end)
-
-	if success then
-		print(player.Name .. "'s data has been saved!")
-	else
-		dataMod.save(player)
-	end
-end
-
--- Function to initialize session data when a player joins the game
--- Combines default values with any saved data from previous sessions
+-- Initializes player data when they join
 dataMod.setupData = function(player)
-	local key = player.UserId
-	local data = dataMod.load(player)
+    local key = player.UserId
+    local data = dataMod.load(player)
 
-	sessionData[key] = dataMod.recursiveCopy(defaultData)
+    sessionData[key] = dataMod.recursiveCopy(defaultData) -- Start with default values
 
-	if data then
-		for index, value in pairs(data) do
-			print(index, value)
-			sessionData[key][index] = value
-		end
-		print(player.Name .. "'s data has been loaded!")
-	else
-		print(player.Name .. " is a new player!")
-	end
+    if data then
+        for index, value in pairs(data) do
+            print(index, value)
+            dataMod.set(player, index, value) -- Apply saved values
+        end
+        print(player.Name.. "'s data has been loaded!")
+    else
+        print(player.Name.. " is a new player!") -- No saved data found
+    end
 end
 
--- Listen for when a player joins the game
+-- When a player joins, create their leaderstats UI and initialize data
 playerService.PlayerAdded:Connect(function(player)
-	local folder = Instance.new("Folder")
-	folder.Name = "leaderstats"
-	folder.Parent = player
+    local folder = Instance.new("Folder")
+    folder.Name = "leaderstats"
+    folder.Parent = player
 
-	local coins = Instance.new("IntValue")
-	coins.Name = "Coins"
-	coins.Parent = folder
-	coins.Value = defaultData.Coins
+    local coins = Instance.new("IntValue")
+    coins.Name = "Coins"
+    coins.Parent = folder
+    coins.Value = defaultData.Coins
 
-	local stage = Instance.new("IntValue")
-	stage.Name = "Stage"
-	stage.Parent = folder
-	stage.Value = defaultData.Stage
+    local wins = Instance.new("IntValue")
+    wins.Name = "Wins"
+    wins.Parent = folder
+    wins.Value = defaultData.Wins
 
-	dataMod.setupData(player)
+    local kills = Instance.new("IntValue")
+    kills.Name = "Kills"
+    kills.Parent = folder
+    kills.Value = defaultData.Kills
+
+    dataMod.setupData(player) -- Load or initialize player data
 end)
 
--- Centralized data setter
+-- Sets a stat value for a player
 dataMod.set = function(player, stat, value)
-	local key = player.UserId
-	sessionData[key][stat] = value
-
-	if player.leaderstats and player.leaderstats:FindFirstChild(stat) then
-		player.leaderstats[stat].Value = value
-	end
+    local key = player.UserId
+    sessionData[key][stat] = value
+    player.leaderstats[stat].Value = value
 end
 
--- Increment function with fallback to get()
+-- Increments a stat value for a player
 dataMod.increment = function(player, stat, value)
-	local key = player.UserId
-	local current = dataMod.get(player, stat) or 0
-	local newValue = current + value
-
-	sessionData[key][stat] = newValue
-
-	if player.leaderstats and player.leaderstats:FindFirstChild(stat) then
-		player.leaderstats[stat].Value = newValue
-	end
+    local key = player.UserId
+    sessionData[key][stat] = dataMod.get(player, stat) + value
+    player.leaderstats[stat].Value = dataMod.get(player, stat)
 end
 
--- Getter function
+-- Retrieves a stat value for a player
 dataMod.get = function(player, stat)
-	local key = player.UserId
-	return sessionData[key] and sessionData[key][stat] or nil
+    local key = player.UserId
+    return sessionData[key][stat]
 end
 
--- Autosave interval in seconds
-local AUTOSAVE_INTERVAL = 120
+-- Saves a player's data to the DataStore
+dataMod.save = function(player)
+    local key = player.UserId
+    local data = dataMod.recursiveCopy(sessionData[key]) -- Clone data to avoid mutation
+
+    local success, err = pcall(function()
+        store:SetAsync(key, data) -- Attempt to save data
+    end)
+
+    if success then
+        print(player.Name.. "'s data has been saved!")
+    else
+        dataMod.save(player) -- Retry on failure (again, be cautious of recursion)
+    end
+end
+
+-- Cleans up session data when a player leaves
+dataMod.removeSessionData = function(player)
+    local key = player.UserId
+    sessionData[key] = nil
+end
+
+-- Handles player leaving: save and clean up
+playerService.PlayerRemoving:Connect(function(player)
+    dataMod.save(player)
+    dataMod.removeSessionData(player)
+end)
 
 -- Autosave loop that runs every AUTOSAVE_INTERVAL seconds
 local function autoSave()
-	while wait(AUTOSAVE_INTERVAL) do
-		print("Auto-saving data for all players")
-		for key, dataTable in pairs(sessionData) do
-			local player = playerService:GetPlayerByUserId(key)
-			if player then
-				dataMod.save(player)
-			end
-		end
-	end
+    while wait(AUTOSAVE_INTERVAL) do
+        print("Auto-saving data for all players")
+        for key, dataTable in pairs(sessionData) do
+            local player = playerService:GetPlayerByUserId(key)
+            dataMod.save(player)
+        end
+    end
 end
 
--- Start autosave loop
-spawn(autoSave)
+spawn(autoSave) -- Start autosave in a separate thread
 
--- Save all data and kick players on shutdown
+-- Save all data and kick players when the game shuts down
 game:BindToClose(function()
-	for _, player in pairs(playerService:GetPlayers()) do
-		dataMod.save(player)
-		player:Kick("Shutting down game. All data saved.")
-	end
+    for _, player in pairs(playerService:GetPlayers()) do
+        dataMod.save(player)
+        player:Kick("Shutting down game. All data saved.")
+    end
 end)
 
--- Removes session data for a player
-dataMod.removeSessionData = function(player)
-	local key = player.UserId
-	sessionData[key] = nil
-end
-
--- Hook into player removal to save and clean up
-playerService.PlayerRemoving:Connect(function(player)
-	dataMod.save(player)
-	dataMod.removeSessionData(player)
-end)
-
--- Return the module so other scripts can require and use its functions
-return dataMod
+return dataMod -- Return the module for use elsewhere
