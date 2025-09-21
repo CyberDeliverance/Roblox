@@ -1,0 +1,104 @@
+--THIS SCRIPT IS INSERTED INTO A NEW MODULE UNDER StarterPack/Tool
+--UNDER StarterPack, THERE NEEDS TO BE A NEW TOOL CREATED AND A HANDLE
+
+-- Services
+local playerService = game:GetService("Players") -- Handles player-related events
+local replicatedStorage = game:GetService("ReplicatedStorage") -- Shared storage between server and clients
+
+-- Remote events/functions
+local hitRemote = replicatedStorage.Hit -- RemoteEvent triggered when a player hits another
+local replicateRemote = replicatedStorage.Replicate -- RemoteEvent used to replicate visual effects
+
+-- Module dependencies
+local dataMod = require(script.Parent.Data) -- Handles player stats (e.g., kills)
+local weapons = {} -- Module table
+
+-- Utility: Get player and character from a hit part
+weapons.playerFromHit = function(hit)
+    local char = hit:FindFirstAncestorOfClass("Model") -- Get character model
+    local player = playerService:GetPlayerFromCharacter(char) -- Get player from character
+    return player, char
+end
+
+-- Angle threshold for hit verification
+local SECURITY_ANGLE = 15 -- Degrees of tolerance for hit direction
+
+-- Verifies that a hit is legitimate based on direction and range
+local function verifyHit(hit, direction, origin, relCFrame, gunSettings)
+    local target = (hit.CFrame * relCFrame).p -- Calculate target position
+    local serverDirection = target - origin -- Vector from shooter to target
+
+    -- Reject if out of range or invalid vectors
+    if serverDirection.Magnitude > gunSettings.range then return end
+    if serverDirection.Magnitude == 0 or direction.Magnitude == 0 then return end
+
+    -- Calculate angle between client-reported direction and server direction
+    local combinedVectors = serverDirection:Dot(direction)
+    local angle = combinedVectors / (direction.Magnitude * serverDirection.Magnitude)
+
+    -- Clamp and convert to degrees
+    if angle > 1 then
+        angle = 0
+    elseif angle < -1 then
+        angle = math.pi
+    else
+        angle = math.acos(angle)
+    end
+    angle = math.deg(angle)
+
+    -- Accept hit if angle is within threshold
+    if angle <= SECURITY_ANGLE then
+        return true
+    end
+end
+
+-- Handles hit detection and damage application
+hitRemote.OnServerEvent:Connect(function(player, weapon, hit, direction, origin, relCFrame)
+    local otherPlayer, char = weapons.playerFromHit(hit)
+
+    -- Validate target and weapon state
+    if char and char:FindFirstChildOfClass("Humanoid") and not weapon.Debounce.Value then
+        local gunSettings = require(weapon.Settings)
+
+        -- Verify hit legitimacy
+        if verifyHit(hit, direction, origin, relCFrame, gunSettings) then
+            -- Apply debounce to prevent rapid firing
+            weapon.Debounce.Value = true
+            local waitTime = 60 / gunSettings.rateOfFire
+            delay(waitTime, function()
+                weapon.Debounce.Value = false
+            end)
+
+            local hum = char:FindFirstChildOfClass("Humanoid")
+
+            if hum.Health > 0 then
+                -- Calculate damage
+                local damage = gunSettings.damage
+                if hit.Name == "Head" then
+                    damage = damage * gunSettings.headshotMultiplier
+                end
+
+                -- Apply damage
+                hum.Health = hum.Health - damage
+
+                -- Award kill if target dies
+                if hum.Health <= 0 then
+                    dataMod.increment(player, "Kills", 1)
+                end
+            end
+        end
+    end
+end)
+
+-- Replicates visual effects of firing to all clients
+replicateRemote.OnServerEvent:Connect(function(player, weapon, origin, target)
+    local length = (target - origin).Magnitude
+    local visualCFrame = CFrame.new(origin, target) * CFrame.new(0, 0, -length / 2)
+    local gunSettings = require(weapon.Settings)
+
+    -- Broadcast visual effect to all clients
+    replicatedStorage.Replicate:FireAllClients(player, gunSettings, visualCFrame, length)
+end)
+
+return weapons -- Return module for use in other scripts
+
