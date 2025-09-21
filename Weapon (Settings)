@@ -1,0 +1,19 @@
+--THIS SCRIPT IS INSERTED INTO A NEW MODULE UNDER StarterPack/Tool
+--UNDER StarterPack, THERE NEEDS TO BE A NEW TOOL CREATED AND A HANDLE
+
+-- Configuration table for weapon behavior
+local gunSettings = {
+    fireMode = "SEMI"; -- Firing mode: "SEMI", "AUTO", etc.
+    damage = 25; -- Base damage per shot
+    headshotMultiplier = 1.5; -- Multiplier for headshot damage
+    rateOfFire = 300; -- Rounds per minute
+    range = 500; -- Maximum effective range in studs
+
+    -- Visual settings for bullet ray
+    rayColor = Color3.fromRGB(255, 160, 75); -- Color of the bullet trail
+    raySize = Vector2.new(0.25, 0.25); -- Width and height of the ray
+
+    debrisTime = 0.075; -- Time before visual effects are cleaned up
+}
+
+return gunSettings -- Export the settings for use in weapon scripts
