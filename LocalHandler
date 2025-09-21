@@ -1,0 +1,14 @@
+--THIS SCRIPT SHOULD BE INSERTED INTO A LocalScript UNDER StarterPlayerScripts
+
+
+-- Loop through all children of this script (typically ModuleScripts)
+for _, module in pairs(script:GetChildren()) do
+	-- Create a coroutine to load the module asynchronously
+	local loadMod = coroutine.create(function()
+		-- Require the module (runs its code and returns its result)
+		require(module)
+	end)
+
+	-- Start the coroutine to execute the module loading
+	coroutine.resume(loadMod)
+end
