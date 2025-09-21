@@ -1,3 +1,6 @@
+--THIS SCRIPT SHOULD BE INSERT INTO A NEW MODULE NAMED Display parented to the UIHandler UNDER StarterGui/Main
+
+
 -- 📦 Access ReplicatedStorage service to retrieve shared values
 local replicatedStorage = game:GetService("ReplicatedStorage")
 
